@@ -4,6 +4,6 @@
   "outputDirectory": "dist/client",
   "framework": null,
   "rewrites": [
-    { "source": "/((?!_build/|assets/|favicon|logo).*)", "destination": "/_shell" }
+    { "source": "/(.*)", "destination": "/_shell.html" }
   ]
 }
