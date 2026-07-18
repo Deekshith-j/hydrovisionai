@@ -6,28 +6,54 @@ import { AnimatedCounter } from "@/components/hv/AnimatedCounter";
 import { makeHistory } from "@/lib/hv-data";
 import { useHydroData } from "@/lib/firebase";
 import { Radar } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export const Route = createFileRoute("/app/bloom")({ component: BloomPage });
 
 function BloomPage() {
   const { prediction } = useHydroData();
-  const timeline = makeHistory(24).map((d, i) => ({ ...d, bloom: 15 + Math.sin(i / 3) * 8 + (Math.random() - 0.5) * 3 }));
-
+  const timeline = makeHistory(24).map((d, i) => ({
+    ...d,
+    bloom: 15 + Math.sin(i / 3) * 8 + (Math.random() - 0.5) * 3,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionTitle eyebrow="Predictive" title="Harmful Algal Bloom" description="Dedicated bloom forecasting module." right={<StatusPill tone="warn">Watch · Bellandur</StatusPill>} />
+      <SectionTitle
+        eyebrow="Predictive"
+        title="Harmful Algal Bloom"
+        description="Dedicated bloom forecasting module."
+        right={<StatusPill tone="warn">Watch · Bellandur</StatusPill>}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <GlassCard>
-          <div className="flex items-center gap-2 text-warning"><Radar className="h-4 w-4" /> <span className="text-xs uppercase tracking-wider">AI Prediction</span></div>
-          <div className="mt-3 font-display text-5xl font-semibold text-warning"><AnimatedCounter value={prediction.algal_bloom_probability} suffix="%" /></div>
+          <div className="flex items-center gap-2 text-warning">
+            <Radar className="h-4 w-4" />{" "}
+            <span className="text-xs uppercase tracking-wider">AI Prediction</span>
+          </div>
+          <div className="mt-3 font-display text-5xl font-semibold text-warning">
+            <AnimatedCounter value={prediction.algal_bloom_probability} suffix="%" />
+          </div>
           <div className="mt-2 text-xs text-muted-foreground">Probability · next 72h</div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider">
-            <div className="rounded-lg border border-emerald/25 bg-emerald/10 p-2 text-center text-emerald">Low</div>
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2 text-center text-muted-foreground">Med</div>
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2 text-center text-muted-foreground">High</div>
+            <div className="rounded-lg border border-emerald/25 bg-emerald/10 p-2 text-center text-emerald">
+              Low
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2 text-center text-muted-foreground">
+              Med
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2 text-center text-muted-foreground">
+              High
+            </div>
           </div>
         </GlassCard>
 
@@ -50,9 +76,15 @@ function BloomPage() {
               { k: "Satellite Chlorophyll (future)", v: 18 },
             ].map((f) => (
               <div key={f.k}>
-                <div className="mb-1 flex justify-between text-[11px] text-muted-foreground"><span>{f.k}</span><span>{f.v}%</span></div>
+                <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+                  <span>{f.k}</span>
+                  <span>{f.v}%</span>
+                </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                  <div className="h-full rounded-full bg-[image:var(--gradient-primary)]" style={{ width: `${f.v}%` }} />
+                  <div
+                    className="h-full rounded-full bg-[image:var(--gradient-primary)]"
+                    style={{ width: `${f.v}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -75,16 +107,44 @@ function BloomPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid stroke="oklch(1 0 0 / 0.06)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fill: "oklch(0.7 0.03 240)", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "oklch(0.7 0.03 240)", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "oklch(0.2 0.04 250)", border: "1px solid oklch(1 0 0 / 0.08)", borderRadius: 12, fontSize: 12 }} />
-              <Area type="monotone" dataKey="bloom" stroke="var(--color-warning)" strokeWidth={2.5} fill="url(#bloomArea)" isAnimationActive animationDuration={900} />
+              <XAxis
+                dataKey="label"
+                tick={{ fill: "oklch(0.7 0.03 240)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: "oklch(0.7 0.03 240)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "oklch(0.2 0.04 250)",
+                  border: "1px solid oklch(1 0 0 / 0.08)",
+                  borderRadius: 12,
+                  fontSize: 12,
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="bloom"
+                stroke="var(--color-warning)"
+                strokeWidth={2.5}
+                fill="url(#bloomArea)"
+                isAnimationActive
+                animationDuration={900}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </GlassCard>
 
-      <ComingSoon tag="Ready for AI Model" title="Bloom dataset integration" description="Attach curated bloom datasets (NOAA / CyAN) to sharpen model precision across watersheds." />
+      <ComingSoon
+        tag="Ready for AI Model"
+        title="Bloom dataset integration"
+        description="Attach curated bloom datasets (NOAA / CyAN) to sharpen model precision across watersheds."
+      />
     </div>
   );
 }

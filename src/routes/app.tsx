@@ -6,7 +6,10 @@ export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
       { title: "HydroVision AI · Water Intelligence Console" },
-      { name: "description", content: "Real-time water quality monitoring, AI prediction, and geospatial intelligence." },
+      {
+        name: "description",
+        content: "Real-time water quality monitoring, AI prediction, and geospatial intelligence.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),

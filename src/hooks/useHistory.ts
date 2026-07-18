@@ -37,7 +37,7 @@ export function useHistory() {
           // Normalize timestamp from seconds to milliseconds if needed
           const ms = item.timestamp < 200000000000 ? item.timestamp * 1000 : item.timestamp;
           const dateObj = new Date(ms);
-          
+
           return {
             timestamp: ms,
             label: `${dateObj.getHours().toString().padStart(2, "0")}:00`,
@@ -92,20 +92,33 @@ export function useHistory() {
     } else if (filter === "custom") {
       const startMs = customRange.start.getTime();
       const endMs = customRange.end.getTime();
-      return historyData.filter(
-        (item) => item.timestamp >= startMs && item.timestamp <= endMs
-      );
+      return historyData.filter((item) => item.timestamp >= startMs && item.timestamp <= endMs);
     }
 
     return historyData.filter((item) => item.timestamp >= cutoff);
   }, [historyData, filter, customRange]);
 
   // Generate sub-histories for simple Recharts integrations
-  const temperatureHistory = useMemo(() => filteredData.map(d => ({ label: d.label, value: d.temperature })), [filteredData]);
-  const phHistory = useMemo(() => filteredData.map(d => ({ label: d.label, value: d.ph })), [filteredData]);
-  const tdsHistory = useMemo(() => filteredData.map(d => ({ label: d.label, value: d.tds })), [filteredData]);
-  const ntuHistory = useMemo(() => filteredData.map(d => ({ label: d.label, value: d.ntu })), [filteredData]);
-  const wqiHistory = useMemo(() => filteredData.map(d => ({ label: d.label, value: d.wqi })), [filteredData]);
+  const temperatureHistory = useMemo(
+    () => filteredData.map((d) => ({ label: d.label, value: d.temperature })),
+    [filteredData],
+  );
+  const phHistory = useMemo(
+    () => filteredData.map((d) => ({ label: d.label, value: d.ph })),
+    [filteredData],
+  );
+  const tdsHistory = useMemo(
+    () => filteredData.map((d) => ({ label: d.label, value: d.tds })),
+    [filteredData],
+  );
+  const ntuHistory = useMemo(
+    () => filteredData.map((d) => ({ label: d.label, value: d.ntu })),
+    [filteredData],
+  );
+  const wqiHistory = useMemo(
+    () => filteredData.map((d) => ({ label: d.label, value: d.wqi })),
+    [filteredData],
+  );
 
   return {
     historyData: filteredData,

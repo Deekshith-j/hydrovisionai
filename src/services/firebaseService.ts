@@ -1,15 +1,15 @@
 import { connectFirebase, hasFirebaseCredentials, db, auth } from "../lib/firebase";
-import { 
-  listenCurrentData, 
-  listenHistory, 
-  listenAlerts, 
-  saveHistory, 
-  saveAlert, 
-  acknowledgeAlert, 
-  getHistoryByDate, 
+import {
+  listenCurrentData,
+  listenHistory,
+  listenAlerts,
+  saveHistory,
+  saveAlert,
+  acknowledgeAlert,
+  getHistoryByDate,
   deleteOldHistory,
   type CurrentReading,
-  type WaterAlert
+  type WaterAlert,
 } from "../lib/database";
 
 export const firebaseService = {
@@ -84,5 +84,5 @@ export const firebaseService = {
    */
   async getHistoryRange(startDate: Date, endDate: Date) {
     return await getHistoryByDate(startDate, endDate);
-  }
+  },
 };

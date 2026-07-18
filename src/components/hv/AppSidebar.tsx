@@ -47,8 +47,12 @@ export function AppSidebar() {
           <Waves className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2.5} />
         </div>
         <div className="min-w-0">
-          <div className="font-display text-[15px] font-semibold tracking-tight">HydroVision AI</div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Water Intelligence</div>
+          <div className="font-display text-[15px] font-semibold tracking-tight">
+            HydroVision AI
+          </div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Water Intelligence
+          </div>
         </div>
       </div>
 
@@ -58,7 +62,9 @@ export function AppSidebar() {
         </div>
         <ul className="flex flex-col gap-0.5">
           {nav.map((item) => {
-            const active = item.exact ? pathname === item.to : pathname === item.to || pathname.startsWith(item.to + "/");
+            const active = item.exact
+              ? pathname === item.to
+              : pathname === item.to || pathname.startsWith(item.to + "/");
             const Icon = item.icon;
             return (
               <li key={item.to}>
@@ -66,7 +72,9 @@ export function AppSidebar() {
                   to={item.to}
                   className={cn(
                     "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]",
+                    active
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]",
                   )}
                 >
                   {active && (

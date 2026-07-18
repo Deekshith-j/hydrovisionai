@@ -11,11 +11,20 @@ export const Route = createFileRoute("/app/stations")({ component: Stations });
 function Stations() {
   const { stations } = useHydroData();
   const [openId, setOpenId] = useState<string | null>(null);
-  const activeOpenId = openId !== null ? openId : (stations.length > 0 ? stations[0].id : null);
+  const activeOpenId = openId !== null ? openId : stations.length > 0 ? stations[0].id : null;
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionTitle eyebrow="Fleet" title="Monitoring Stations" description="Every deployed HydroVision node." right={<StatusPill tone="good">{stations.filter(s => s.status === "ONLINE").length} online</StatusPill>} />
+      <SectionTitle
+        eyebrow="Fleet"
+        title="Monitoring Stations"
+        description="Every deployed HydroVision node."
+        right={
+          <StatusPill tone="good">
+            {stations.filter((s) => s.status === "ONLINE").length} online
+          </StatusPill>
+        }
+      />
 
       <div className="grid gap-4 xl:grid-cols-2">
         {stations.map((s, i) => {
@@ -44,14 +53,20 @@ function Stations() {
                 </div>
               </div>
 
-              <button onClick={() => setOpenId(open ? null : s.id)} className="mt-4 inline-flex items-center gap-1 text-xs text-cyan hover:underline">
-                {open ? "Hide" : "Show"} details <ChevronDown className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} />
+              <button
+                onClick={() => setOpenId(open ? null : s.id)}
+                className="mt-4 inline-flex items-center gap-1 text-xs text-cyan hover:underline"
+              >
+                {open ? "Hide" : "Show"} details{" "}
+                <ChevronDown className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} />
               </button>
 
               {open && (
                 <div className="mt-3 grid gap-3 border-t border-white/[0.06] pt-3 md:grid-cols-3">
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Sensor Information</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Sensor Information
+                    </div>
                     <ul className="mt-2 space-y-1 text-xs text-foreground/85">
                       <li>Temperature · DS18B20</li>
                       <li>pH · analog probe</li>
@@ -60,13 +75,21 @@ function Stations() {
                     </ul>
                   </div>
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI Prediction</div>
-                    <div className="mt-2 text-sm text-foreground/90">Risk · <span className="text-cyan">LOW</span></div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      AI Prediction
+                    </div>
+                    <div className="mt-2 text-sm text-foreground/90">
+                      Risk · <span className="text-cyan">LOW</span>
+                    </div>
                     <div className="text-xs text-muted-foreground">Confidence 94% · WQI stable</div>
                   </div>
                   <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Maintenance</div>
-                    <div className="mt-2 text-sm text-foreground/90">Calibration due in 12 days</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Maintenance
+                    </div>
+                    <div className="mt-2 text-sm text-foreground/90">
+                      Calibration due in 12 days
+                    </div>
                     <div className="text-xs text-muted-foreground">Last serviced · 24 days ago</div>
                   </div>
                 </div>
@@ -76,7 +99,11 @@ function Stations() {
         })}
       </div>
 
-      <ComingSoon tag="Coming Soon" title="Multi-station dashboard" description="Fleet-wide overview with cross-station analytics and comparative scoring." />
+      <ComingSoon
+        tag="Coming Soon"
+        title="Multi-station dashboard"
+        description="Fleet-wide overview with cross-station analytics and comparative scoring."
+      />
     </div>
   );
 }

@@ -1,23 +1,30 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { ref, onValue, set, get } from "firebase/database";
-import { db, hasFirebaseCredentials } from "../lib/firebase";
+import { signInAnonymously } from "firebase/auth";
+import { db, auth, hasFirebaseCredentials } from "../lib/firebase";
 import { firebaseService } from "../services/firebaseService";
-import { 
-  current as mockCurrent, 
-  prediction as mockPrediction, 
-  stations as mockStations, 
+import {
+  current as mockCurrent,
+  prediction as mockPrediction,
+  stations as mockStations,
   alerts as mockAlerts,
-  makeHistory,
   type CurrentReading,
-  type Prediction
+  type Prediction,
 } from "../lib/hv-data";
 import { type WaterAlert } from "../lib/database";
+
+export interface DeviceInfo {
+  status: string;
+  lastSeen: number | string;
+  firmware: string;
+}
 
 interface FirebaseContextType {
   current: CurrentReading;
   prediction: Prediction;
   stations: any[];
   alerts: any[];
+  device: DeviceInfo;
   loading: boolean;
   error: string | null;
   isConnected: boolean;
@@ -34,178 +41,166 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [prediction, setPrediction] = useState<Prediction>(mockPrediction);
   const [stations, setStations] = useState<any[]>(mockStations);
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [device, setDevice] = useState<DeviceInfo>({
+    status: "Offline",
+    lastSeen: "Never",
+    firmware: "v1.0.0",
+  });
+  const [loading, setLoading] = useState(hasFirebaseCredentials && !!db);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isFirebaseActive, setIsFirebaseActive] = useState(hasFirebaseCredentials && !!db);
 
-  const lastSavedTimestamp = useRef<number | null>(null);
-  const lastAlertTimestamp = useRef<number | null>(null);
-
   useEffect(() => {
-    // 1. If Firebase is active and initialized, listen to data
-    if (isFirebaseActive && db) {
+    let isSubscribed = true;
+
+    if (isFirebaseActive && db && auth) {
       setLoading(true);
-      
-      // A. Setup Connection Listener via .info/connected
+
+      // Track paths loaded to set loading to false
+      let loadedCurrent = false;
+      let loadedPrediction = false;
+      let loadedStations = false;
+      let loadedAlerts = false;
+      let loadedDevice = false;
+
+      const checkLoadingFinished = () => {
+        if (
+          isSubscribed &&
+          loadedCurrent &&
+          loadedPrediction &&
+          loadedStations &&
+          loadedAlerts &&
+          loadedDevice
+        ) {
+          setLoading(false);
+        }
+      };
+
+      // 1. Setup Connection Listener via .info/connected
       const connectedRef = ref(db, ".info/connected");
       const unsubConnected = onValue(connectedRef, (snap) => {
-        setIsConnected(snap.val() === true);
-      });
-
-      // Initialize/Authenticate & Seed defaults if missing
-      firebaseService.initialize().catch((err) => {
-        console.error("Auth error, continuing with DB listeners:", err);
-      });
-
-      // Seed current telemetry if not existing
-      get(ref(db, "current")).then((snap) => {
-        if (!snap.exists()) {
-          set(ref(db, "current"), mockCurrent);
+        if (isSubscribed) {
+          setIsConnected(snap.val() === true);
         }
       });
 
-      // Seed prediction & stations if not existing
-      get(ref(db, "stations")).then((snap) => {
-        if (!snap.exists()) {
-          set(ref(db, "stations"), mockStations);
+      // 2. Setup Anonymous Auth with retry on failure
+      const authenticateAnonymously = async () => {
+        while (isSubscribed) {
+          try {
+            await signInAnonymously(auth);
+            if (isSubscribed) {
+              console.log("Firebase Anonymous Auth Successful");
+              setError(null);
+            }
+            break;
+          } catch (err) {
+            console.error("Anonymous authentication failed, retrying in 5 seconds...", err);
+            if (isSubscribed) {
+              setError(err instanceof Error ? err.message : String(err));
+            }
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+          }
         }
-      });
-      get(ref(db, "prediction")).then((snap) => {
-        if (!snap.exists()) {
-          set(ref(db, "prediction"), mockPrediction);
-        }
-      });
+      };
+      authenticateAnonymously();
 
-      // Seed history records if empty
-      get(ref(db, "history")).then((snap) => {
-        if (!snap.exists()) {
-          const initialHistory = makeHistory(24);
-          const historyUpdate: Record<string, any> = {};
-          initialHistory.forEach((h, i) => {
-            const ts = Math.floor((Date.now() - (24 - i) * 3600 * 1000) / 1000);
-            historyUpdate[ts] = {
-              temperature: h.temperature,
-              ph: h.ph,
-              tds: h.tds,
-              ntu: h.ntu,
-              wqi: h.wqi,
-              state: h.wqi >= 80 ? "GOOD" : h.wqi >= 60 ? "POOR" : "UNSAFE",
-              latitude: mockCurrent.latitude + (Math.random() - 0.5) * 0.01,
-              longitude: mockCurrent.longitude + (Math.random() - 0.5) * 0.01,
-              altitude: 0,
-              speed: 0,
-              satellites: 8
-            };
-          });
-          set(ref(db, "history"), historyUpdate);
-        }
-      });
-
-      // Seed alerts database path if empty
-      get(ref(db, "history/alerts")).then((snap) => {
-        if (!snap.exists()) {
-          const alertsUpdate: Record<string, any> = {};
-          mockAlerts.forEach((a) => {
-            const ts = Date.now() - (a.id * 10 * 60 * 1000);
-            alertsUpdate[ts] = {
-              title: a.title,
-              description: `Incidence reported for ${a.station}. Critical parameter thresholds crossed.`,
-              severity: a.severity,
-              timestamp: ts,
-              ack: a.ack
-            };
-          });
-          set(ref(db, "history/alerts"), alertsUpdate);
-        }
-      });
-
-      // B. Setup Current Telemetry Listener
+      // 3. Setup Current Telemetry Listener
       const unsubCurrent = firebaseService.listenCurrent((data) => {
-        if (data) {
+        if (isSubscribed && data) {
           setCurrent((prev) => ({ ...prev, ...data }));
-          
-          // Automatic History Storage: Triggered on client side
-          const ts = data.timestamp;
-          if (ts && ts !== lastSavedTimestamp.current) {
-            lastSavedTimestamp.current = ts;
-            firebaseService.pushHistory(data).catch((err) => {
-              console.error("Failed to automatically copy history:", err);
-            });
+          loadedCurrent = true;
+          checkLoadingFinished();
+        }
+      });
+
+      // 4. Setup Stations Listener
+      const unsubStations = onValue(ref(db, "HydroVisionAI/stations"), (snap) => {
+        if (isSubscribed) {
+          if (snap.exists()) {
+            const val = snap.val();
+            setStations(Array.isArray(val) ? val : Object.values(val));
           }
+          loadedStations = true;
+          checkLoadingFinished();
+        }
+      });
 
-          // Automatic Alert checking
-          // WQI < 60 OR state == POOR OR state == UNSAFE
-          const wqi = data.wqi;
-          const state = data.state || (data as any).status || "GOOD";
-          if ((wqi < 60 || state === "POOR" || state === "UNSAFE") && ts !== lastAlertTimestamp.current) {
-            lastAlertTimestamp.current = ts;
-            const severity = (wqi < 50 || state === "UNSAFE") ? "critical" : "medium";
-            const alertPayload: WaterAlert = {
-              timestamp: ts,
-              title: wqi < 60 ? "Critical WQI Alert" : "Unsafe Water Quality",
-              description: `Sensor reading: WQI is ${wqi} (${state}). Temp: ${data.temperature}°C, pH: ${data.ph}, TDS: ${data.tds}ppm, NTU: ${data.ntu}.`,
-              severity,
-              ack: false,
-            };
-            firebaseService.pushAlert(alertPayload).catch((err) => {
-              console.error("Failed to save alert:", err);
-            });
+      // 5. Setup Prediction Listener
+      const unsubPrediction = onValue(ref(db, "HydroVisionAI/prediction"), (snap) => {
+        if (isSubscribed) {
+          if (snap.exists()) {
+            setPrediction(snap.val());
           }
+          loadedPrediction = true;
+          checkLoadingFinished();
         }
       });
 
-      // C. Setup History Listener
-      // To get static list of alerts & other paths
-      const unsubStations = onValue(ref(db, "stations"), (snap) => {
-        if (snap.exists()) {
-          const val = snap.val();
-          setStations(Array.isArray(val) ? val : Object.values(val));
-        }
-      });
-
-      const unsubPrediction = onValue(ref(db, "prediction"), (snap) => {
-        if (snap.exists()) {
-          setPrediction(snap.val());
-        }
-      });
-
-      // D. Setup Alerts Listener
+      // 6. Setup Alerts Listener
       const unsubAlerts = firebaseService.listenAlerts((list) => {
-        setAlerts(list);
-        setLoading(false);
+        if (isSubscribed) {
+          setAlerts(list);
+          loadedAlerts = true;
+          checkLoadingFinished();
+        }
+      });
+
+      // 7. Setup Device Info Listener
+      const unsubDevice = onValue(ref(db, "HydroVisionAI/device"), (snap) => {
+        if (isSubscribed) {
+          if (snap.exists()) {
+            setDevice(snap.val() as DeviceInfo);
+          }
+          loadedDevice = true;
+          checkLoadingFinished();
+        }
       });
 
       return () => {
+        isSubscribed = false;
         unsubConnected();
         unsubCurrent();
         unsubStations();
         unsubPrediction();
         unsubAlerts();
+        unsubDevice();
       };
     } else {
-      // 2. Simulation / Mock Data Fallback Mode
+      // Simulation / Mock Data Fallback Mode
       setLoading(false);
-      setIsConnected(true); // Treat local as connected
-      
-      // Initialize alerts with mock list
+      setIsConnected(true);
       setAlerts(mockAlerts);
+      setDevice({
+        status: "Connected",
+        lastSeen: Date.now(),
+        firmware: "v1.4.2",
+      });
 
       const interval = setInterval(() => {
+        if (!isSubscribed) return;
         setCurrent((prev) => {
           const nextTemp = +(prev.temperature + (Math.random() - 0.5) * 0.2).toFixed(1);
-          const nextPh = +(Math.max(4.5, Math.min(10.5, prev.ph + (Math.random() - 0.5) * 0.1))).toFixed(2);
-          const nextTds = Math.max(80, Math.min(800, prev.tds + Math.round((Math.random() - 0.5) * 6)));
-          const nextNtu = +(Math.max(0.2, Math.min(15, prev.ntu + (Math.random() - 0.5) * 0.25))).toFixed(2);
-          
-          // Calculate mock WQI dynamically
+          const nextPh = +Math.max(
+            4.5,
+            Math.min(10.5, prev.ph + (Math.random() - 0.5) * 0.1),
+          ).toFixed(2);
+          const nextTds = Math.max(
+            80,
+            Math.min(800, prev.tds + Math.round((Math.random() - 0.5) * 6)),
+          );
+          const nextNtu = +Math.max(
+            0.2,
+            Math.min(15, prev.ntu + (Math.random() - 0.5) * 0.25),
+          ).toFixed(2);
+
           let nextWqi = 85;
           if (nextPh < 6.5 || nextPh > 8.5) nextWqi -= 15;
           if (nextTds > 500) nextWqi -= 20;
           if (nextNtu > 5) nextWqi -= 20;
           nextWqi = Math.max(10, Math.min(100, nextWqi + Math.round((Math.random() - 0.5) * 2)));
 
-          // Derive Water State
           let nextState = "GOOD";
           if (nextWqi < 60) nextState = "POOR";
           if (nextWqi < 45 || nextPh < 5.0 || nextPh > 9.5) nextState = "UNSAFE";
@@ -223,16 +218,16 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             timestamp: nextTs,
           };
 
-          // Handle simulated alert generation
           if (nextWqi < 60 || nextState === "POOR" || nextState === "UNSAFE") {
-            const severity = (nextWqi < 50 || nextState === "UNSAFE") ? "critical" : "medium";
+            const severity = nextWqi < 50 || nextState === "UNSAFE" ? "critical" : "medium";
             const newSimAlert = {
               id: nextTs.toString(),
               timestamp: nextTs,
-              title: nextWqi < 60 ? "Critical WQI Violation (Simulated)" : "Unsafe Water (Simulated)",
+              title:
+                nextWqi < 60 ? "Critical WQI Violation (Simulated)" : "Unsafe Water (Simulated)",
               description: `Simulated threshold crossed! WQI: ${nextWqi}, State: ${nextState}. pH: ${nextPh}, TDS: ${nextTds}ppm.`,
               severity,
-              ack: false
+              ack: false,
             };
             setAlerts((prevAlerts) => [newSimAlert, ...prevAlerts]);
           }
@@ -241,14 +236,17 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       }, 5000);
 
-      return () => clearInterval(interval);
+      return () => {
+        isSubscribed = false;
+        clearInterval(interval);
+      };
     }
   }, [isFirebaseActive]);
 
   // Operations
   const updateCurrent = async (newReading: Partial<CurrentReading>) => {
     if (isFirebaseActive && db) {
-      await set(ref(db, "current"), { ...current, ...newReading });
+      await set(ref(db, "HydroVisionAI/current"), { ...current, ...newReading });
     } else {
       setCurrent((prev) => ({ ...prev, ...newReading }));
     }
@@ -256,7 +254,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updatePrediction = async (newPrediction: Partial<Prediction>) => {
     if (isFirebaseActive && db) {
-      await set(ref(db, "prediction"), { ...prediction, ...newPrediction });
+      await set(ref(db, "HydroVisionAI/prediction"), { ...prediction, ...newPrediction });
     } else {
       setPrediction((prev) => ({ ...prev, ...newPrediction }));
     }
@@ -267,7 +265,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await firebaseService.ackAlert(alertId.toString());
     } else {
       setAlerts((prev) =>
-        prev.map((a) => (a.id === alertId || a.timestamp === alertId ? { ...a, ack: true } : a))
+        prev.map((a) => (a.id === alertId || a.timestamp === alertId ? { ...a, ack: true } : a)),
       );
     }
   };
@@ -279,6 +277,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         prediction,
         stations,
         alerts,
+        device,
         loading,
         error,
         isConnected,

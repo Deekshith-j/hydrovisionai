@@ -75,7 +75,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "HydroVision AI — AI-Powered Water Intelligence Platform" },
-      { name: "description", content: "Real-time IoT water quality monitoring with AI prediction, geospatial intelligence, and environmental analytics." },
+      {
+        name: "description",
+        content:
+          "Real-time IoT water quality monitoring with AI prediction, geospatial intelligence, and environmental analytics.",
+      },
       { name: "author", content: "HydroVision AI" },
       { name: "theme-color", content: "#071B2D" },
       { property: "og:title", content: "HydroVision AI" },
@@ -87,9 +91,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/logo.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,
