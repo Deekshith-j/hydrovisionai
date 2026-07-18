@@ -1,6 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "npm run vercel-build",
-  "outputDirectory": ".vercel/output",
-  "framework": null
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "framework": null,
+  "rewrites": [
+    { "source": "/((?!_build/|assets/|favicon|logo).*)", "destination": "/_shell" }
+  ]
 }
